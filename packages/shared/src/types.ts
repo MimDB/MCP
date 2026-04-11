@@ -81,10 +81,12 @@ export interface TableSummary {
   name: string
   /** PostgreSQL schema that owns the table (e.g. "public"). */
   schema: string
-  /** Number of columns in the table. */
-  columns: number
   /** Planner statistics estimate of the number of rows. */
-  estimated_rows: number
+  row_estimate: number
+  /** Whether the row count is an exact count (true for small tables). */
+  row_count_exact: boolean
+  /** Table size in bytes (including indexes and TOAST). */
+  size_bytes: number
 }
 
 /**

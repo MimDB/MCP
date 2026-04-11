@@ -92,12 +92,12 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
 
   server.tool(
     'list_tables',
-    'List all tables in the project database, including their schema, column count, and estimated row count.',
+    'List all tables in the project database with row estimates and sizes.',
     {},
     async (): Promise<CallToolResult> => {
       try {
         const tables = await client.database.listTables()
-        const tableText = formatMarkdownTable(tables, ['name', 'schema', 'columns', 'estimated_rows'])
+        const tableText = formatMarkdownTable(tables, ['name', 'schema', 'row_estimate', 'size_bytes'])
         return ok(`Found ${tables.length} tables:\n\n${tableText}`)
       } catch (err) {
         if (err instanceof MimDBApiError) {
@@ -231,18 +231,14 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
 
   server.tool(
     'execute_sql_dry_run',
-    'Execute a SQL query inside a BEGIN READ ONLY \u2026 ROLLBACK block. ' +
-      'All changes are rolled back so nothing is persisted. ' +
-      'Useful for previewing DML (INSERT, UPDATE, DELETE) or validating query plans. ' +
-      'Note: volatile functions (e.g. nextval, gen_random_uuid) may still advance their state even though the transaction is rolled back.',
+    'Preview a SQL query without executing it. ' +
+      'For SELECT queries: runs EXPLAIN to show the query plan and estimated row counts. ' +
+      'For write queries (INSERT/UPDATE/DELETE): runs EXPLAIN to validate syntax and show the execution plan without modifying data. ' +
+      'Use this to verify queries before running them with execute_sql.',
     {
       query: z.string().describe('SQL query or statement to preview.'),
-      params: z
-        .array(z.unknown())
-        .optional()
-        .describe('Optional positional parameters bound to $1, $2, \u2026 placeholders.'),
     },
-    async ({ query, params }): Promise<CallToolResult> => {
+    async ({ query }): Promise<CallToolResult> => {
       const byteLen = utf8ByteLength(query)
       if (byteLen > MAX_QUERY_BYTES) {
         return errResult(
@@ -252,11 +248,11 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
         )
       }
 
-      const wrappedQuery = `BEGIN READ ONLY; ${query}; ROLLBACK;`
+      const explainQuery = `EXPLAIN (FORMAT TEXT) ${query}`
 
       try {
-        const result = await client.database.executeSql(wrappedQuery, params)
-        return ok(`[DRY RUN - rolled back]\n${wrapSqlOutput(formatSqlResult(result))}`)
+        const result = await client.database.executeSql(explainQuery)
+        return ok(`[DRY RUN - query plan only, no data modified]\n${wrapSqlOutput(formatSqlResult(result))}`)
       } catch (err) {
         if (err instanceof MimDBApiError) {
           return errResult(formatToolError(err.status, err.apiError))
