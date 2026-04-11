@@ -18,7 +18,7 @@ describe('parsePublicConfig', () => {
     expect(cfg.projectRef).toBe('abcdef1234567890')
     expect(cfg.serviceRoleKey).toBe('super-secret-key')
     expect(cfg.readOnly).toBe(false)
-    expect(cfg.features).toEqual([])
+    expect(cfg.features).toBeUndefined()
   })
 
   it('strips trailing slash from URL', () => {
@@ -119,7 +119,7 @@ describe('parseAdminConfig', () => {
     expect(cfg.projectRef).toBeUndefined()
     expect(cfg.serviceRoleKey).toBeUndefined()
     expect(cfg.readOnly).toBe(false)
-    expect(cfg.features).toEqual([])
+    expect(cfg.features).toBeUndefined()
   })
 
   it('parses platform + project mode', () => {

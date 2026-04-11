@@ -100,7 +100,7 @@ function featuresSchema<T extends string>(allowed: readonly T[]) {
     .string()
     .optional()
     .transform((raw, ctx) => {
-      if (!raw) return [] as T[]
+      if (!raw) return undefined
 
       const items = raw.split(',').map((s) => s.trim())
       const invalid = items.filter((item) => !(allowed as readonly string[]).includes(item))
@@ -133,8 +133,8 @@ export interface PublicConfig {
   serviceRoleKey: string
   /** When true, the server will only allow read operations. */
   readOnly: boolean
-  /** Subset of feature groups to expose as MCP tools. */
-  features: PublicFeature[]
+  /** Subset of feature groups to expose as MCP tools. Undefined means all. */
+  features?: PublicFeature[]
 }
 
 /**
@@ -151,8 +151,8 @@ export interface AdminConfig {
   serviceRoleKey?: string
   /** When true, the server will only allow read operations. */
   readOnly: boolean
-  /** Subset of feature groups to expose as MCP tools. */
-  features: AdminFeature[]
+  /** Subset of feature groups to expose as MCP tools. Undefined means all. */
+  features?: AdminFeature[]
 }
 
 // ---------------------------------------------------------------------------
@@ -205,7 +205,7 @@ export function parsePublicConfig(env: Record<string, string | undefined>): Publ
     projectRef: parsed.MIMDB_PROJECT_REF,
     serviceRoleKey: parsed.MIMDB_SERVICE_ROLE_KEY,
     readOnly: parsed.MIMDB_READ_ONLY ?? false,
-    features: parsed.MIMDB_FEATURES ?? [],
+    features: parsed.MIMDB_FEATURES,
   }
 }
 
@@ -242,6 +242,6 @@ export function parseAdminConfig(env: Record<string, string | undefined>): Admin
     projectRef: parsed.MIMDB_PROJECT_REF,
     serviceRoleKey: parsed.MIMDB_SERVICE_ROLE_KEY,
     readOnly: parsed.MIMDB_READ_ONLY ?? false,
-    features: parsed.MIMDB_FEATURES ?? [],
+    features: parsed.MIMDB_FEATURES,
   }
 }
