@@ -1,6 +1,6 @@
 {
   "name": "@mimdb/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for MimDB - AI assistant integration",
   "type": "module",
   "exports": {
@@ -14,9 +14,12 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mimdb-mcp": "./dist/index.js"
+    "mimdb-mcp": "dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsup && tsc --emitDeclarationOnly --outDir dist",
     "lint": "tsc --noEmit",
@@ -35,7 +38,13 @@
     "vitest": "^4.1.1"
   },
   "license": "MIT",
-  "keywords": ["mimdb", "mcp", "model-context-protocol", "ai", "baas"],
+  "keywords": [
+    "mimdb",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "baas"
+  ],
   "engines": {
     "node": ">=20"
   }
