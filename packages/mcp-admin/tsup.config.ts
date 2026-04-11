@@ -8,4 +8,5 @@ export default defineConfig({
   sourcemap: true,
   splitting: false,
   noExternal: ['shared'],
+  banner: { js: '#!/usr/bin/env node' },
 })

@@ -10,6 +10,7 @@
     }
   },
   "scripts": {
+    "build": "echo 'shared is bundled by consumers'",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit"

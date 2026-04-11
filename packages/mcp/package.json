@@ -14,9 +14,9 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mimdb-mcp": "./bin/mimdb-mcp.ts"
+    "mimdb-mcp": "./dist/index.js"
   },
-  "files": ["dist", "bin"],
+  "files": ["dist"],
   "scripts": {
     "build": "tsup && tsc --emitDeclarationOnly --outDir dist",
     "lint": "tsc --noEmit",
