@@ -36,11 +36,16 @@ jobs:
         run: |
           dir="packages/mcp"
 
-          # Strip devDependencies and scripts for clean publish
+          # Strip devDependencies, scripts, and workspace:* refs for clean publish
           node -e "
             const pkg = require('./$dir/package.json');
             delete pkg.devDependencies;
             delete pkg.scripts;
+            if (pkg.dependencies) {
+              for (const [k, v] of Object.entries(pkg.dependencies)) {
+                if (v.startsWith('workspace:')) delete pkg.dependencies[k];
+              }
+            }
             require('fs').writeFileSync('./$dir/package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
@@ -60,11 +65,16 @@ jobs:
         run: |
           dir="packages/mcp-admin"
 
-          # Strip devDependencies and scripts for clean publish
+          # Strip devDependencies, scripts, and workspace:* refs for clean publish
           node -e "
             const pkg = require('./$dir/package.json');
             delete pkg.devDependencies;
             delete pkg.scripts;
+            if (pkg.dependencies) {
+              for (const [k, v] of Object.entries(pkg.dependencies)) {
+                if (v.startsWith('workspace:')) delete pkg.dependencies[k];
+              }
+            }
             require('fs').writeFileSync('./$dir/package.json', JSON.stringify(pkg, null, 2) + '\n');
           "
 
