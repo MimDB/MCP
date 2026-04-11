@@ -77,7 +77,7 @@ describe('MCP protocol', () => {
     enabledFeatures?: string[],
     readOnly = false,
   ): Promise<string[]> {
-    await registerToolGroups(server, client, PUBLIC_TOOL_GROUPS, enabledFeatures, readOnly)
+    registerToolGroups(server, client, PUBLIC_TOOL_GROUPS, enabledFeatures, readOnly)
 
     const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair()
 

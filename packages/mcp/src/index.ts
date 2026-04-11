@@ -40,7 +40,7 @@ async function main(): Promise<void> {
     version: '0.1.0',
   })
 
-  await registerToolGroups(
+  registerToolGroups(
     server,
     client,
     PUBLIC_TOOL_GROUPS,
