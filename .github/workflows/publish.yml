@@ -61,31 +61,4 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish @mimdb/mcp-admin (private)
-        run: |
-          dir="packages/mcp-admin"
-
-          # Strip devDependencies, scripts, and workspace:* refs for clean publish
-          node -e "
-            const pkg = require('./$dir/package.json');
-            delete pkg.devDependencies;
-            delete pkg.scripts;
-            if (pkg.dependencies) {
-              for (const [k, v] of Object.entries(pkg.dependencies)) {
-                if (v.startsWith('workspace:')) delete pkg.dependencies[k];
-              }
-            }
-            require('fs').writeFileSync('./$dir/package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-
-          cd "$dir"
-          CURRENT=$(npm view "@mimdb/mcp-admin" version 2>/dev/null || echo "0.0.0")
-          LOCAL=$(node -p "require('./package.json').version")
-          if [ "$CURRENT" != "$LOCAL" ]; then
-            echo "Publishing @mimdb/mcp-admin@$LOCAL (current: $CURRENT)"
-            npm publish --access restricted --provenance
-          else
-            echo "Skipping @mimdb/mcp-admin@$LOCAL (already published)"
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # @mimdb/mcp-admin is not published to npm - it's run from source for internal use
