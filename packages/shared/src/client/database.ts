@@ -52,8 +52,11 @@ export class DatabaseClient {
    * @throws {MimDBApiError} On non-OK response or network failure.
    */
   async getTableSchema(table: string): Promise<TableSchema> {
+    // Strip schema prefix if provided (e.g. "public.users" -> "users")
+    // The API expects just the table name, not schema-qualified.
+    const tableName = table.includes('.') ? table.split('.').pop()! : table
     return this.base.get<TableSchema>(
-      `/v1/introspect/${this.ref}/tables/${encodeURIComponent(table)}`,
+      `/v1/introspect/${this.ref}/tables/${encodeURIComponent(tableName)}`,
     )
   }
 
