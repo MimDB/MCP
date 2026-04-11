@@ -344,6 +344,17 @@ export interface ProjectWithKeys extends Project {
 }
 
 /**
+ * Current API key JWTs for a project, as returned by the platform API.
+ * These are full, usable JWT tokens (not just prefixes).
+ */
+export interface ProjectKeys {
+  /** Public anonymous key JWT for client-side access. */
+  anon_key: string
+  /** Service role key JWT with elevated privileges (bypasses RLS). */
+  service_role_key: string
+}
+
+/**
  * Metadata for a project-scoped API key.
  */
 export interface ApiKeyInfo {

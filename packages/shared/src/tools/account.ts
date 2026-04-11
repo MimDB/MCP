@@ -180,6 +180,104 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
   )
 
   // -------------------------------------------------------------------------
+  // select_project - always registered, switches the active project context
+  // -------------------------------------------------------------------------
+
+  server.tool(
+    'select_project',
+    'Switch the active project context. Fetches the project\'s service role key and configures all project-scoped tools (database, storage, cron, vectors, etc.) to target this project. You must call this before using any project-scoped tools.',
+    {
+      project_ref: z
+        .string()
+        .regex(/^[0-9a-f]{16}$/)
+        .describe('The 16-character hex project reference. Use list_projects to find available refs.'),
+    },
+    async ({ project_ref }): Promise<CallToolResult> => {
+      try {
+        // Resolve ref to UUID
+        const projectId = await client.platform.resolveRefToId(project_ref)
+
+        // Fetch the project's API keys (returns fresh JWTs)
+        const keys = await client.platform.getApiKeys(projectId)
+
+        if (!keys.service_role_key) {
+          return errResult(formatToolError(500, {
+            code: 'MCP-0001',
+            message: 'Could not retrieve service role key for this project.',
+          }))
+        }
+
+        // Switch the client to this project
+        client.setProject(project_ref, keys.service_role_key)
+
+        // Get project details for confirmation
+        const project = await client.platform.getProject(projectId)
+
+        return ok([
+          `**Project selected: ${project.name}**`,
+          '',
+          `| Field | Value |`,
+          `| --- | --- |`,
+          `| Ref | \`${project.ref}\` |`,
+          `| ID | \`${project.id}\` |`,
+          `| Status | ${project.status} |`,
+          '',
+          'All project-scoped tools (database, storage, cron, vectors, debugging, development) are now targeting this project.',
+          '',
+          '> **Note:** You are connected with **service_role** access, which bypasses all Row Level Security (RLS) policies. Exercise caution with write operations.',
+        ].join('\n'))
+      } catch (err) {
+        if (err instanceof MimDBApiError) {
+          return errResult(formatToolError(err.status, err.apiError))
+        }
+        if (err instanceof Error && err.message.includes('not found')) {
+          return errResult(formatToolError(404, {
+            code: 'MCP-0002',
+            message: err.message,
+            detail: 'Use list_projects to see available project refs.',
+          }))
+        }
+        throw err
+      }
+    },
+  )
+
+  // -------------------------------------------------------------------------
+  // current_project - always registered, shows active project context
+  // -------------------------------------------------------------------------
+
+  server.tool(
+    'current_project',
+    'Show which project is currently selected, or indicate that no project is selected.',
+    {},
+    async (): Promise<CallToolResult> => {
+      if (!client.hasProject) {
+        return ok('No project is currently selected. Use select_project to choose a project.')
+      }
+      try {
+        const projectId = await client.platform.resolveRefToId(client.projectRef!)
+        const project = await client.platform.getProject(projectId)
+        return ok([
+          `**Active project: ${project.name}**`,
+          '',
+          `| Field | Value |`,
+          `| --- | --- |`,
+          `| Ref | \`${project.ref}\` |`,
+          `| ID | \`${project.id}\` |`,
+          `| Status | ${project.status} |`,
+          '',
+          'Connected with **service_role** access (bypasses RLS).',
+        ].join('\n'))
+      } catch (err) {
+        if (err instanceof MimDBApiError) {
+          return errResult(formatToolError(err.status, err.apiError))
+        }
+        throw err
+      }
+    },
+  )
+
+  // -------------------------------------------------------------------------
   // Write tools (readOnly=false only)
   // -------------------------------------------------------------------------
 

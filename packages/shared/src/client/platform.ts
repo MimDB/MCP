@@ -19,7 +19,7 @@ import type {
   Organization,
   Project,
   ProjectWithKeys,
-  ApiKeyInfo,
+  ProjectKeys,
   RlsPolicy,
   LogEntry,
 } from '../types.js'
@@ -170,10 +170,10 @@ export class PlatformClient {
    * and roles. To retrieve raw keys, regenerate them via {@link regenerateApiKeys}.
    *
    * @param projectId - UUID of the project.
-   * @returns An array of {@link ApiKeyInfo} records for the project.
+   * @returns {@link ProjectKeys} containing fresh anon and service_role JWTs.
    * @throws {MimDBApiError} On 404 or other API failure.
    */
-  async getApiKeys(projectId: string): Promise<ApiKeyInfo[]> {
+  async getApiKeys(projectId: string): Promise<ProjectKeys> {
     return this.base.get(`/v1/platform/projects/${projectId}/api-keys`, { useAdmin: true })
   }
 
@@ -184,10 +184,10 @@ export class PlatformClient {
    * Any clients still using the old keys will start receiving 401 errors.
    *
    * @param projectId - UUID of the project.
-   * @returns An array of {@link ApiKeyInfo} records with the new raw key values.
+   * @returns {@link ProjectKeys} containing the new anon and service_role JWTs.
    * @throws {MimDBApiError} On 404 or other API failure.
    */
-  async regenerateApiKeys(projectId: string): Promise<ApiKeyInfo[]> {
+  async regenerateApiKeys(projectId: string): Promise<ProjectKeys> {
     return this.base.post(
       `/v1/platform/projects/${projectId}/api-keys/regenerate`,
       {},

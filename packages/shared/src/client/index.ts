@@ -56,11 +56,12 @@ export interface MimDBClientOptions extends BaseClientOptions {
  * available and does not require a project reference.
  */
 export class MimDBClient {
-  private readonly _base: BaseClient
+  private _base: BaseClient
   private readonly _baseUrl: string
-  private readonly ref: string | undefined
+  private readonly _baseOptions: BaseClientOptions
+  private ref: string | undefined
 
-  // Lazy-loaded domain client instances
+  // Lazy-loaded domain client instances (invalidated on project switch)
   private _database?: DatabaseClient
   private _storage?: StorageClient
   private _cron?: CronClient
@@ -75,10 +76,51 @@ export class MimDBClient {
   constructor(options: MimDBClientOptions) {
     const { projectRef, ...baseOptions } = options
     this._base = new BaseClient(baseOptions)
+    this._baseOptions = baseOptions
     // Mirror the trailing-slash strip that BaseClient performs internally so
     // the facade exposes a consistent value without reaching into private state.
     this._baseUrl = baseOptions.baseUrl.replace(/\/$/, '')
     this.ref = projectRef
+  }
+
+  /**
+   * Switch the active project context. Creates a new BaseClient with the
+   * provided service role key and invalidates all cached domain clients.
+   * Used by the admin MCP's select_project tool for dynamic project access.
+   *
+   * @param projectRef - The 16-char hex project reference
+   * @param serviceRoleKey - The project's service role key (full JWT)
+   */
+  setProject(projectRef: string, serviceRoleKey: string): void {
+    this.ref = projectRef
+    this._base = new BaseClient({ ...this._baseOptions, serviceRoleKey })
+    this.invalidateDomainClients()
+  }
+
+  /**
+   * Clear the active project context. Project-scoped tools will return
+   * an error until a project is selected again.
+   */
+  clearProject(): void {
+    this.ref = undefined
+    this._base = new BaseClient(this._baseOptions)
+    this.invalidateDomainClients()
+  }
+
+  /**
+   * Whether a project is currently selected.
+   * When false, project-scoped domain clients will throw on access.
+   */
+  get hasProject(): boolean {
+    return this.ref !== undefined
+  }
+
+  private invalidateDomainClients(): void {
+    this._database = undefined
+    this._storage = undefined
+    this._cron = undefined
+    this._vectors = undefined
+    this._stats = undefined
   }
 
   // -------------------------------------------------------------------------
@@ -109,6 +151,7 @@ export class MimDBClient {
    * Requires `projectRef` to have been provided at construction.
    */
   get database(): DatabaseClient {
+    this.requireProject('database')
     this._database ??= new DatabaseClient(this._base, this.ref!)
     return this._database
   }
@@ -118,6 +161,7 @@ export class MimDBClient {
    * Requires `projectRef` to have been provided at construction.
    */
   get storage(): StorageClient {
+    this.requireProject('storage')
     this._storage ??= new StorageClient(this._base, this.ref!)
     return this._storage
   }
@@ -127,6 +171,7 @@ export class MimDBClient {
    * Requires `projectRef` to have been provided at construction.
    */
   get cron(): CronClient {
+    this.requireProject('cron')
     this._cron ??= new CronClient(this._base, this.ref!)
     return this._cron
   }
@@ -136,6 +181,7 @@ export class MimDBClient {
    * Requires `projectRef` to have been provided at construction.
    */
   get vectors(): VectorsClient {
+    this.requireProject('vectors')
     this._vectors ??= new VectorsClient(this._base, this.ref!)
     return this._vectors
   }
@@ -145,8 +191,17 @@ export class MimDBClient {
    * Requires `projectRef` to have been provided at construction.
    */
   get stats(): StatsClient {
+    this.requireProject('stats')
     this._stats ??= new StatsClient(this._base, this.ref!)
     return this._stats
+  }
+
+  private requireProject(domain: string): void {
+    if (!this.ref) {
+      throw new Error(
+        `No project selected. Use the select_project tool to choose a project before using ${domain} tools.`,
+      )
+    }
   }
 
   /**

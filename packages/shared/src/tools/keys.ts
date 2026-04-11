@@ -10,12 +10,10 @@
  * platform client. The write tool is only registered when `readOnly` is false.
  */
 
-import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { MimDBClient } from '../client/index.js'
 import { MimDBApiError } from '../client/base.js'
-import { formatMarkdownTable } from '../formatters.js'
 import { formatToolError } from '../errors.js'
 
 // ---------------------------------------------------------------------------
@@ -85,8 +83,17 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
       try {
         const projectId = await getProjectId()
         const keys = await client.platform.getApiKeys(projectId)
-        const table = formatMarkdownTable(keys, ['name', 'key_prefix', 'role'])
-        return ok(`Found ${keys.length} API key(s):\n\n${table}`)
+        const lines = [
+          'Project API keys:',
+          '',
+          '| Key | Type |',
+          '| --- | --- |',
+          `| \`${keys.anon_key.slice(0, 20)}...\` | anon |`,
+          `| \`${keys.service_role_key.slice(0, 20)}...\` | service_role |`,
+          '',
+          '> Full key values are JWT tokens. Use select_project to connect with service_role access.',
+        ]
+        return ok(lines.join('\n'))
       } catch (err) {
         if (err instanceof MimDBApiError) {
           return errResult(formatToolError(err.status, err.apiError))
@@ -106,10 +113,6 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
   // regenerate_api_keys
   // -------------------------------------------------------------------------
 
-  // Zod schema used only for documentation; regenerate takes no user input.
-  const _noParams = z.object({}).describe('No parameters required.')
-  void _noParams
-
   server.tool(
     'regenerate_api_keys',
     'WARNING: Rotate the project signing key. This invalidates ALL existing API keys and tokens immediately. ' +
@@ -120,28 +123,18 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
       try {
         const projectId = await getProjectId()
         const keys = await client.platform.regenerateApiKeys(projectId)
-        const table = formatMarkdownTable(keys, ['name', 'key_prefix', 'role'])
-        const rawLines = keys
-          .filter((k) => k.raw_key !== undefined)
-          .map((k) => `- **${k.name}** (\`${k.role}\`): \`${k.raw_key}\``)
-          .join('\n')
         const text = [
-          'API keys rotated. All previous keys and tokens are now invalid.',
+          'API keys rotated. All previous keys and tokens are now **invalid**.',
           '',
-          '## New Key Metadata',
+          '## New Keys',
           '',
-          table,
-          ...(rawLines
-            ? [
-                '',
-                '## Raw Key Values (shown once - save immediately)',
-                '',
-                rawLines,
-                '',
-                '> **WARNING:** These raw key values are not stored by the platform.',
-                '> Save them now in a secure secrets manager.',
-              ]
-            : []),
+          `**Anon key:** \`${keys.anon_key}\``,
+          '',
+          `**Service role key:** \`${keys.service_role_key}\``,
+          '',
+          '> **WARNING:** These keys are generated from the new signing secret.',
+          '> Any clients using old keys will receive 401 errors immediately.',
+          '> Save these keys in a secure secrets manager.',
         ].join('\n')
         return ok(text)
       } catch (err) {
