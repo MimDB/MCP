@@ -130,7 +130,9 @@ export interface IndexInfo {
   /** Columns covered by the index. */
   columns: string[]
   /** Whether the index enforces uniqueness. */
-  unique: boolean
+  is_unique: boolean
+  /** Whether this is the primary key index. */
+  is_primary: boolean
   /** Index access method (e.g. "btree", "gin", "ivfflat"). */
   type: string
 }
@@ -146,10 +148,10 @@ export interface TableSchema {
   schema: string
   /** Column definitions. */
   columns: ColumnInfo[]
-  /** Constraint definitions. */
-  constraints: ConstraintInfo[]
-  /** Index definitions. */
-  indexes: IndexInfo[]
+  /** Constraint definitions (may be null when the API omits them). */
+  constraints: ConstraintInfo[] | null
+  /** Index definitions (may be null when the API omits them). */
+  indexes: IndexInfo[] | null
 }
 
 // ---------------------------------------------------------------------------

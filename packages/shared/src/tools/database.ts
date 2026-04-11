@@ -130,20 +130,20 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
           'is_primary_key',
         ])
 
+        const constraints = schema.constraints ?? []
         const constraintsTable =
-          schema.constraints.length > 0
-            ? formatMarkdownTable(schema.constraints, [
+          constraints.length > 0
+            ? formatMarkdownTable(constraints, [
                 'name',
                 'type',
                 'columns',
-                'foreign_table',
-                'foreign_columns',
               ])
             : 'No constraints.'
 
+        const indexes = schema.indexes ?? []
         const indexesTable =
-          schema.indexes.length > 0
-            ? formatMarkdownTable(schema.indexes, ['name', 'columns', 'unique', 'type'])
+          indexes.length > 0
+            ? formatMarkdownTable(indexes, ['name', 'columns', 'is_unique', 'is_primary', 'type'])
             : 'No indexes.'
 
         const text = [

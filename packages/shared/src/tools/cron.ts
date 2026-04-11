@@ -19,7 +19,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { MimDBClient } from '../client/index.js'
 import { MimDBApiError } from '../client/base.js'
-import { formatMarkdownTable } from '../formatters.js'
+import { formatMarkdownTable, redactSecrets } from '../formatters.js'
 import { formatToolError } from '../errors.js'
 
 // ---------------------------------------------------------------------------
@@ -77,7 +77,9 @@ export function register(server: McpServer, client: MimDBClient, readOnly = fals
     async (): Promise<CallToolResult> => {
       try {
         const result = await client.cron.listJobs()
-        const tableText = formatMarkdownTable(result.jobs, ['id', 'name', 'schedule', 'command', 'active'])
+        // Redact secrets (JWTs, Bearer tokens) from cron commands before display
+        const sanitizedJobs = result.jobs.map((j) => ({ ...j, command: redactSecrets(j.command) }))
+        const tableText = formatMarkdownTable(sanitizedJobs, ['id', 'name', 'schedule', 'command', 'active'])
         return ok(
           `Found ${result.total} of ${result.max_allowed} allowed jobs:\n\n${tableText}`,
         )

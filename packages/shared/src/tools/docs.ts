@@ -15,7 +15,6 @@ import MiniSearch from 'minisearch'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { MimDBApiError } from '../client/base.js'
-import { formatToolError } from '../errors.js'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -132,16 +131,6 @@ function ok(text: string): CallToolResult {
   return { content: [{ type: 'text', text }] }
 }
 
-/**
- * Casts a local `ToolResult`-shaped object to {@link CallToolResult}.
- *
- * @param result - A `ToolResult` from the errors module.
- * @returns The same value typed as {@link CallToolResult}.
- */
-function errResult(result: { content: { type: 'text'; text: string }[]; isError?: boolean }): CallToolResult {
-  return result as CallToolResult
-}
-
 // ---------------------------------------------------------------------------
 // register
 // ---------------------------------------------------------------------------
@@ -172,11 +161,20 @@ export function register(server: McpServer): void {
       let index: MiniSearch<SearchEntry>
       try {
         index = await getIndex()
-      } catch (err) {
-        if (err instanceof MimDBApiError) {
-          return errResult(formatToolError(err.status, err.apiError))
-        }
-        throw err
+      } catch {
+        return ok(
+          'Documentation search is temporarily unavailable (the search index could not be loaded).\n\n' +
+          `You can browse the documentation directly at ${DOCS_BASE_URL}\n\n` +
+          'Key sections:\n' +
+          `- Getting Started: ${DOCS_BASE_URL}/quickstart\n` +
+          `- Auth: ${DOCS_BASE_URL}/auth\n` +
+          `- Database: ${DOCS_BASE_URL}/database\n` +
+          `- Storage: ${DOCS_BASE_URL}/storage\n` +
+          `- REST API: ${DOCS_BASE_URL}/rest-api\n` +
+          `- Realtime: ${DOCS_BASE_URL}/realtime\n` +
+          `- Vectors: ${DOCS_BASE_URL}/vectors\n` +
+          `- Scheduled Jobs: ${DOCS_BASE_URL}/scheduled-jobs`,
+        )
       }
 
       const results = index.search(query, {
