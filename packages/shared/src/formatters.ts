@@ -95,10 +95,14 @@ export function formatSqlResult(result: SqlResult): string {
   const columnNames = columns.map((c) => c.name) as string[]
   const displayRows = rows.slice(0, MAX_DISPLAY_ROWS)
 
-  // Convert each row array into an object keyed by column name.
-  const objects = displayRows.map((row) =>
-    Object.fromEntries(columnNames.map((name, i) => [name, row[i]]))
-  )
+  // Rows may be arrays (positional) or objects (keyed by column name).
+  // Handle both formats for compatibility.
+  const objects = displayRows.map((row) => {
+    if (Array.isArray(row)) {
+      return Object.fromEntries(columnNames.map((name, i) => [name, row[i]]))
+    }
+    return row as Record<string, unknown>
+  })
 
   const table = formatMarkdownTable(objects, columnNames)
 

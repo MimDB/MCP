@@ -61,8 +61,8 @@ export interface SqlColumn {
 export interface SqlResult {
   /** Ordered list of columns in each row. */
   columns: SqlColumn[]
-  /** Row data as a 2-D array aligned to {@link columns}. */
-  rows: unknown[][]
+  /** Row data - may be positional arrays or keyed objects depending on API version. */
+  rows: (unknown[] | Record<string, unknown>)[]
   /** Total number of rows returned (not affected rows). */
   row_count: number
   /** Wall-clock query duration reported by the server, in milliseconds. */
