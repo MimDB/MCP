@@ -97,7 +97,13 @@ export class PlatformClient {
    * @throws {MimDBApiError} On API or network failure.
    */
   async listProjects(): Promise<Project[]> {
-    return this.base.get('/v1/platform/projects', { useAdmin: true })
+    const orgs = await this.listOrganizations()
+    const allProjects: Project[] = []
+    for (const org of orgs) {
+      const projects = await this.listOrgProjects(org.id)
+      allProjects.push(...projects)
+    }
+    return allProjects
   }
 
   /**
