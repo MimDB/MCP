@@ -6,3 +6,5 @@ export { formatSqlResult, formatMarkdownTable, wrapSqlOutput } from './formatter
 export { MimDBClient } from './client/index.js'
 export { MimDBApiError } from './client/base.js'
 export type { BaseClientOptions, RequestOptions } from './client/base.js'
+export { PUBLIC_TOOL_GROUPS, ADMIN_TOOL_GROUPS, registerToolGroups } from './tools/index.js'
+export type { ToolRegistrar } from './tools/index.js'
