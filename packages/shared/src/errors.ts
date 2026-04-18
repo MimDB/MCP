@@ -33,23 +33,37 @@ export type ErrorCategory = 'platform' | 'auth' | 'operational' | 'validation'
  * | Status | Category |
  * |--------|----------|
  * | 401, 403 | `auth` |
- * | 500+ or 0 | `platform` |
+ * | 0 (network) | `platform` |
+ * | 500+ with structured `apiError.code` | `operational` |
+ * | 500+ without structured code | `platform` |
  * | everything else | `operational` |
  *
+ * A structured `apiError.code` (e.g. `SQL-0004`) signals that the server
+ * produced a deliberate, application-level error rather than crashing or
+ * becoming unreachable. Reclassifying those 5xx responses as `operational`
+ * prevents the misleading "platform unreachable, do not retry" hint from
+ * being shown for what are really query-level failures the user can act on.
+ *
  * @param status - HTTP status code, or 0 for network-level failures.
+ * @param apiError - Optional structured error envelope from the API response.
+ *   When present and `status >= 500`, the response is treated as operational.
  * @returns The appropriate {@link ErrorCategory}.
  *
  * @example
  * ```ts
- * classifyError(401) // -> 'auth'
- * classifyError(500) // -> 'platform'
- * classifyError(404) // -> 'operational'
- * classifyError(0)   // -> 'platform'
+ * classifyError(401)                                // -> 'auth'
+ * classifyError(500)                                // -> 'platform' (no envelope = real outage)
+ * classifyError(500, { code: 'SQL-0004', message })// -> 'operational' (server-reported error)
+ * classifyError(404)                                // -> 'operational'
+ * classifyError(0)                                  // -> 'platform'
  * ```
  */
-export function classifyError(status: number): ErrorCategory {
+export function classifyError(status: number, apiError?: ApiError): ErrorCategory {
   if (status === 401 || status === 403) return 'auth'
-  if (status === 0 || status >= 500) return 'platform'
+  if (status === 0) return 'platform'
+  if (status >= 500) {
+    return apiError?.code ? 'operational' : 'platform'
+  }
   return 'operational'
 }
 
@@ -117,13 +131,24 @@ export function formatToolError(
   apiError?: ApiError,
   baseUrl?: string,
 ): ToolResult {
-  const category = classifyError(status)
+  const category = classifyError(status, apiError)
   const hint = buildHint(status, category, baseUrl)
 
   const parts: string[] = [`[Error: ${category}]`]
 
+  if (apiError?.code) {
+    parts.push(`(${apiError.code})`)
+  }
+
   if (apiError?.message) {
     parts.push(apiError.message)
+  }
+
+  // Server-provided detail (e.g. the real PostgreSQL error message behind
+  // a generic "Query execution failed") is the most actionable part of the
+  // response, so it goes before the category hint.
+  if (apiError?.detail) {
+    parts.push(`- ${apiError.detail}`)
   }
 
   if (hint) {

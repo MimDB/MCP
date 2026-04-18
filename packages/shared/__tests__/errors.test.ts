@@ -45,6 +45,28 @@ describe('classifyError', () => {
   it('classifies 422 as operational', () => {
     expect(classifyError(422)).toBe('operational')
   })
+
+  it('reclassifies 500 as operational when a structured apiError.code is present', () => {
+    expect(
+      classifyError(500, { code: 'SQL-0004', message: 'Query execution failed' }),
+    ).toBe('operational')
+  })
+
+  it('reclassifies 503 as operational when a structured apiError.code is present', () => {
+    expect(
+      classifyError(503, { code: 'SQL-0008', message: 'Database pool overloaded' }),
+    ).toBe('operational')
+  })
+
+  it('keeps 500 as platform when apiError has no code', () => {
+    expect(classifyError(500, { code: '', message: 'unexpected' })).toBe('platform')
+  })
+
+  it('keeps status 0 as platform regardless of apiError', () => {
+    expect(
+      classifyError(0, { code: 'SQL-0004', message: 'Query execution failed' }),
+    ).toBe('platform')
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -124,6 +146,29 @@ describe('formatToolError', () => {
   it('includes baseUrl in platform error message when provided', () => {
     const result = formatToolError(503, undefined, 'https://example.mimdb.io')
     expect(result.content[0]!.text).toContain('https://example.mimdb.io')
+  })
+
+  it('includes the error code when provided', () => {
+    const apiError = { code: 'SQL-0004', message: 'Query execution failed' }
+    const result = formatToolError(500, apiError)
+    expect(result.content[0]!.text).toContain('SQL-0004')
+  })
+
+  it('surfaces apiError.detail when provided', () => {
+    const apiError = {
+      code: 'SQL-0004',
+      message: 'Query execution failed',
+      detail: 'ERROR: relation "foo" already exists (SQLSTATE 42P07)',
+    }
+    const result = formatToolError(500, apiError)
+    expect(result.content[0]!.text).toContain('already exists')
+  })
+
+  it('tags SQL-0004 500 responses as operational, not platform', () => {
+    const apiError = { code: 'SQL-0004', message: 'Query execution failed' }
+    const result = formatToolError(500, apiError)
+    expect(result.content[0]!.text).toContain('[Error: operational]')
+    expect(result.content[0]!.text.toLowerCase()).not.toContain('do not retry')
   })
 })
 
