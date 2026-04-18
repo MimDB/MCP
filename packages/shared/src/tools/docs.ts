@@ -37,7 +37,12 @@ const MAX_RESULTS = 10
  * A single entry in the documentation search index JSON file.
  */
 interface SearchEntry {
-  /** URL path relative to {@link DOCS_BASE_URL} (e.g. `/guides/quickstart`). */
+  /**
+   * URL path relative to {@link DOCS_BASE_URL}. May or may not carry a
+   * leading slash - the docs build emits entries like `"quickstart"` but
+   * historical callers assumed `/quickstart`. {@link buildResultUrl}
+   * normalises both shapes.
+   */
   path: string
   /** Page title. */
   title: string
@@ -131,6 +136,19 @@ function ok(text: string): CallToolResult {
   return { content: [{ type: 'text', text }] }
 }
 
+/**
+ * Joins {@link DOCS_BASE_URL} with a search-result path, tolerating entries
+ * that lack a leading slash. The docs build emits paths like `"quickstart"`;
+ * a naive `${base}${path}` produced `https://docs.mimdb.devquickstart`.
+ *
+ * @param path - Path from a {@link SearchEntry}, with or without leading `/`.
+ * @returns Fully-qualified URL with exactly one slash between host and path.
+ */
+function buildResultUrl(path: string): string {
+  const normalised = path.startsWith('/') ? path : `/${path}`
+  return `${DOCS_BASE_URL}${normalised}`
+}
+
 // ---------------------------------------------------------------------------
 // register
 // ---------------------------------------------------------------------------
@@ -193,7 +211,7 @@ export function register(server: McpServer): void {
 
       const lines: string[] = []
       top.forEach((result, i) => {
-        const url = `${DOCS_BASE_URL}${result.path}`
+        const url = buildResultUrl(result.path)
         lines.push(`${i + 1}. **${result.title}**`)
         if (result.description) {
           lines.push(`   ${result.description}`)
